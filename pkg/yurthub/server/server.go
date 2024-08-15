@@ -61,14 +61,20 @@ func RunYurtHubServers(cfg *config.YurtHubConfiguration,
 		}
 	}
 
+	if cfg.YurtHubSecureProxyServerServing != nil {
+		if _, err := cfg.YurtHubSecureProxyServerServing.Serve(proxyHandler, 0, stopCh); err != nil {
+			return err
+		}
+	}
+
 	if cfg.YurtHubDummyProxyServerServing != nil {
 		if err := cfg.YurtHubDummyProxyServerServing.Serve(proxyHandler, 0, stopCh); err != nil {
 			return err
 		}
 	}
 
-	if cfg.YurtHubSecureProxyServerServing != nil {
-		if _, err := cfg.YurtHubSecureProxyServerServing.Serve(proxyHandler, 0, stopCh); err != nil {
+	if cfg.YurtHubDummySecureProxyServerServing != nil {
+		if _, err := cfg.YurtHubDummySecureProxyServerServing.Serve(proxyHandler, 0, stopCh); err != nil {
 			return err
 		}
 	}

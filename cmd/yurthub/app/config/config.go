@@ -57,44 +57,45 @@ import (
 
 // YurtHubConfiguration represents configuration of yurthub
 type YurtHubConfiguration struct {
-	LBMode                          string
-	RemoteServers                   []*url.URL
-	GCFrequency                     int
-	NodeName                        string
-	HeartbeatFailedRetry            int
-	HeartbeatHealthyThreshold       int
-	HeartbeatTimeoutSeconds         int
-	HeartbeatIntervalSeconds        int
-	MaxRequestInFlight              int
-	EnableProfiling                 bool
-	StorageWrapper                  cachemanager.StorageWrapper
-	SerializerManager               *serializer.SerializerManager
-	RESTMapperManager               *meta.RESTMapperManager
-	SharedFactory                   informers.SharedInformerFactory
-	NodePoolInformerFactory         dynamicinformer.DynamicSharedInformerFactory
-	WorkingMode                     util.WorkingMode
-	KubeletHealthGracePeriod        time.Duration
-	FilterManager                   *manager.Manager
-	CoordinatorServer               *url.URL
-	MinRequestTimeout               time.Duration
-	TenantNs                        string
-	NetworkMgr                      *network.NetworkManager
-	CertManager                     certificate.YurtCertificateManager
-	YurtHubServerServing            *apiserver.DeprecatedInsecureServingInfo
-	YurtHubProxyServerServing       *apiserver.DeprecatedInsecureServingInfo
-	YurtHubDummyProxyServerServing  *apiserver.DeprecatedInsecureServingInfo
-	YurtHubSecureProxyServerServing *apiserver.SecureServingInfo
-	YurtHubProxyServerAddr          string
-	YurtHubNamespace                string
-	ProxiedClient                   kubernetes.Interface
-	DiskCachePath                   string
-	CoordinatorPKIDir               string
-	EnableCoordinator               bool
-	CoordinatorServerURL            *url.URL
-	CoordinatorStoragePrefix        string
-	CoordinatorStorageAddr          string // ip:port
-	CoordinatorClient               kubernetes.Interface
-	LeaderElection                  componentbaseconfig.LeaderElectionConfiguration
+	LBMode                               string
+	RemoteServers                        []*url.URL
+	GCFrequency                          int
+	NodeName                             string
+	HeartbeatFailedRetry                 int
+	HeartbeatHealthyThreshold            int
+	HeartbeatTimeoutSeconds              int
+	HeartbeatIntervalSeconds             int
+	MaxRequestInFlight                   int
+	EnableProfiling                      bool
+	StorageWrapper                       cachemanager.StorageWrapper
+	SerializerManager                    *serializer.SerializerManager
+	RESTMapperManager                    *meta.RESTMapperManager
+	SharedFactory                        informers.SharedInformerFactory
+	NodePoolInformerFactory              dynamicinformer.DynamicSharedInformerFactory
+	WorkingMode                          util.WorkingMode
+	KubeletHealthGracePeriod             time.Duration
+	FilterManager                        *manager.Manager
+	CoordinatorServer                    *url.URL
+	MinRequestTimeout                    time.Duration
+	TenantNs                             string
+	NetworkMgr                           *network.NetworkManager
+	CertManager                          certificate.YurtCertificateManager
+	YurtHubServerServing                 *apiserver.DeprecatedInsecureServingInfo
+	YurtHubProxyServerServing            *apiserver.DeprecatedInsecureServingInfo
+	YurtHubSecureProxyServerServing      *apiserver.SecureServingInfo
+	YurtHubDummyProxyServerServing       *apiserver.DeprecatedInsecureServingInfo
+	YurtHubDummySecureProxyServerServing *apiserver.SecureServingInfo
+	YurtHubProxyServerAddr               string
+	YurtHubNamespace                     string
+	ProxiedClient                        kubernetes.Interface
+	DiskCachePath                        string
+	CoordinatorPKIDir                    string
+	EnableCoordinator                    bool
+	CoordinatorServerURL                 *url.URL
+	CoordinatorStoragePrefix             string
+	CoordinatorStorageAddr               string // ip:port
+	CoordinatorClient                    kubernetes.Interface
+	LeaderElection                       componentbaseconfig.LeaderElectionConfiguration
 }
 
 // Complete converts *options.YurtHubOptions to *YurtHubConfiguration
@@ -314,9 +315,7 @@ func prepareServerServing(options *options.YurtHubOptions, certMgr certificate.Y
 		return err
 	}
 
-	yurtHubSecureProxyHost := options.YurtHubProxyHost
 	if options.EnableDummyIf {
-		yurtHubSecureProxyHost = options.HubAgentDummyIfIP
 		if err := (&apiserveroptions.DeprecatedInsecureServingOptions{
 			BindAddress: net.ParseIP(options.HubAgentDummyIfIP),
 			BindPort:    options.YurtHubProxyPort,
@@ -335,7 +334,7 @@ func prepareServerServing(options *options.YurtHubOptions, certMgr certificate.Y
 	}
 
 	if err := (&apiserveroptions.SecureServingOptions{
-		BindAddress: net.ParseIP(yurtHubSecureProxyHost),
+		BindAddress: net.ParseIP(options.YurtHubProxyHost),
 		BindPort:    options.YurtHubProxySecurePort,
 		BindNetwork: "tcp",
 		ServerCert: apiserveroptions.GeneratableKeyCert{
@@ -349,6 +348,22 @@ func prepareServerServing(options *options.YurtHubOptions, certMgr certificate.Y
 	}
 	cfg.YurtHubSecureProxyServerServing.ClientCA = caBundleProvider
 	cfg.YurtHubSecureProxyServerServing.DisableHTTP2 = true
+
+	if err := (&apiserveroptions.SecureServingOptions{
+		BindAddress: net.ParseIP(options.HubAgentDummyIfIP),
+		BindPort:    options.YurtHubProxySecurePort,
+		BindNetwork: "tcp",
+		ServerCert: apiserveroptions.GeneratableKeyCert{
+			CertKey: apiserveroptions.CertKey{
+				CertFile: serverCertPath,
+				KeyFile:  serverCertPath,
+			},
+		},
+	}).ApplyTo(&cfg.YurtHubDummySecureProxyServerServing); err != nil {
+		return err
+	}
+	cfg.YurtHubDummySecureProxyServerServing.ClientCA = caBundleProvider
+	cfg.YurtHubDummySecureProxyServerServing.DisableHTTP2 = true
 
 	return nil
 }
